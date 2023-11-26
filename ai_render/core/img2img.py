@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional
 import uuid
 from diffusers.pipelines import LatentConsistencyModelImg2ImgPipeline
-from utils.imgs2gif import images_to_gif, load_images_from_folder
+from ai_render.core.utils.imgs2gif import images_to_gif, load_images_from_folder
 from diffusers.image_processor import PipelineImageInput
 import os
 import random

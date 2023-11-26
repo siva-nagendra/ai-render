@@ -33,3 +33,22 @@ class AiRenderPanel(QtWidgets.QWidget):
         pixmap.loadFromData(byte_array.getvalue())
         scaled_pixmap = pixmap.scaled(self.image_label.width(), self.image_label.height(), QtCore.Qt.KeepAspectRatio)
         self.image_label.setPixmap(scaled_pixmap)
+    
+
+    def _paneActivated(self, pane_tab):
+        """ Called when the python panel pane is activated. """
+
+        pass
+    
+
+    def _paneDeactivated(self):
+        """ Called when the python panel pane is deactivated. """
+
+        pass
+
+
+    def _paneClosed(self):
+        """ Called when the python panel pane is closed. """
+
+        pass
+

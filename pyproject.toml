@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "ai-render"
+version = "0.1.0"
+description = "Renders the scene using diffusion models"
+authors = ["siva-nagendra <hello.sivanagendra@gmail.com>"]
+license = "MIT license"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+accelerate = "0.23.0"
+torch = "2.0.1"
+torchvision = "0.15.2"
+diffusers = "0.23.0"
+pillow = "10.1.0"
+transformers = "4.34.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
