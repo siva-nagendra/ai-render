@@ -67,21 +67,21 @@ class Predictor:
             if not continuous:
                 return
 
-    def _save_result(self, result) -> str:
-        """
-        Save the generated image.
-        Args:
-            result: The generated image.
-        Returns:
-            str: The path to the saved image.
-        """
-        timestamp = time.strftime("%Y%m%d-%H%M%S")
-        output_dir = "/Users/siva/devel/houdini-lcm/output/"
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        output_path = os.path.join(output_dir, f"out-{timestamp}.png")
-        result.save(output_path)
-        return output_path
+    # def _save_result(self, result) -> str:
+    #     """
+    #     Save the generated image.
+    #     Args:
+    #         result: The generated image.
+    #     Returns:
+    #         str: The path to the saved image.
+    #     """
+    #     timestamp = time.strftime("%Y%m%d-%H%M%S")
+    #     output_dir = "/Users/siva/devel/houdini-lcm/output/"
+    #     if not os.path.exists(output_dir):
+    #         os.makedirs(output_dir)
+    #     output_path = os.path.join(output_dir, f"out-{timestamp}.png")
+    #     result.save(output_path)
+    #     return output_path
 
 def main(prompt: str, prompts: str, width: int, height: int, steps: int, seed: int, continuous: bool):
     """

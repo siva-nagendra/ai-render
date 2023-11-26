@@ -110,18 +110,18 @@ def generate_i2i(
 
 
 # prompt = "A wedding cake delicious and colorful in bright pink and white"
-prompt = "A furry black and white cat with a red bow tie in matrix movie"
+# prompt = "A furry black and white cat with a red bow tie in matrix movie"
 
-folder_path = "/Users/siva/devel/houdini-lcm/input/img2img/lucifer/render/"
-seq = os.listdir(folder_path)
+# folder_path = "/Users/siva/devel/houdini-lcm/input/img2img/lucifer/render/"
+# seq = os.listdir(folder_path)
 # frames = [Image.open(os.path.join(folder_path, x)) for x in seq]
-frames = [Image.open(os.path.join(folder_path, seq[5]))]
+# frames = [Image.open(os.path.join(folder_path, seq[5]))]
 
-save_dir = "/Users/siva/devel/houdini-lcm/output/img2img/lucifer_01/"
+# save_dir = "/Users/siva/devel/houdini-lcm/output/img2img/lucifer_01/"
 
-output_path, seed = generate_i2i(prompt=prompt, frames=frames, save_dir=save_dir)
-print("success")
-print(output_path, seed)
+# output_path, seed = generate_i2i(prompt=prompt, frames=frames, save_dir=save_dir)
+# print("success")
+# print(output_path, seed)
 
 
 # # make gif
