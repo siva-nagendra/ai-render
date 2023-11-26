@@ -76,7 +76,7 @@ class Predictor:
             str: The path to the saved image.
         """
         timestamp = time.strftime("%Y%m%d-%H%M%S")
-        output_dir = "/Users/sivanagendra/Documents/devel/houdini-lcm/output/"
+        output_dir = "/Users/siva/devel/houdini-lcm/output/"
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         output_path = os.path.join(output_dir, f"out-{timestamp}.png")
@@ -109,7 +109,7 @@ prompts = None  # or "Your file path here"
 width = 512
 height = 512
 steps = 8
-seed = None  # or your seed here
+seed = 0  # or your seed here
 continuous = False  # or True
 
 main(prompt, prompts, width, height, steps, seed, continuous)
