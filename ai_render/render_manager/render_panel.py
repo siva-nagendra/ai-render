@@ -5,7 +5,7 @@ import os
 import logging
 from ai_render.config.config import Config
 from ai_render.render_manager.render_thread import RenderThread
-from ai_render.core import render_from_text
+from ai_render.core import render_engine
 from ai_render.core.utils.exporter import ImageExporter
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -119,8 +119,14 @@ class AiRenderPanel(QtWidgets.QWidget):
         height = self.height_slider.value()
         steps = self.steps_slider.value()
         seed = self.seed_slider.value()
-        hip_dir = "/Users/siva/devel/houdini"
-        output_dir = os.path.join(hip_dir, "output")
+        output_dir = "/Users/siva/devel/houdini"
+
+        img2img = False
+        image = None
+
+        if img2img:
+            img_path = "/Users/siva/devel/ai-render/data/input1.png"
+            image = Image.open(img_path)
 
         self.config = Config(
             output_dir=output_dir,
@@ -129,8 +135,11 @@ class AiRenderPanel(QtWidgets.QWidget):
             height=height,
             steps=steps,
             seed=seed,
+            image2image=img2img,
+            image=image,
         )
-        engine = render_from_text.RenderFromText(self.config)
+
+        engine = render_engine.RenderEngine(self.config)
         
         self.render_thread = RenderThread(engine=engine, on_complete_callback=self.post_render_tasks)
         # Update UI to show rendering is in progress

@@ -1,58 +1,53 @@
-# It's assumed that these are the correct paths to the modules. If not, adjust accordingly.
-from ai_render.core.render_from_text import RenderFromText
-from ai_render.core.utils.exporter import ImageExporter
+from ai_render.core.render_engine import RenderEngine
 from ai_render.config.config import Config
+from ai_render.core.utils.exporter import ImageExporter
+from PIL import Image
 import time
-from tabulate import tabulate
 import warnings
-import threading
+from tabulate import tabulate
+from ai_render.render_manager.render_thread import RenderThread
 
 # Suppress FutureWarnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-# Define the function to perform rendering.
-def render_in_thread(cfg, prompt, width, height, steps, seed):
-    engine = RenderFromText(cfg)
-
-    # Start the timer
-    start_time = time.perf_counter()
-
-    # Render the image, assuming `render` method only takes `prompt` as an argument.
-    # If `render` accepts more arguments, you'll need to adjust the call accordingly.
-    image = engine.render(prompt)
-
-    # End the timer
+# Define the post-render callback function
+def post_render_tasks(rendered_images):
+    image_exporter = ImageExporter(cfg_instance.output_dir)
+    image_paths = [image_exporter.export(img) for img in rendered_images]
+    
+    # End the timer and calculate render time
     end_time = time.perf_counter()
     render_time = end_time - start_time
 
-    # Export the image
-    image_exporter = ImageExporter(cfg.output_dir)
-    image_path = image_exporter.export(image)
-
     # Create a colorful logging table
-    table = [["Render Time", f"{render_time:.4f} seconds"], ["Image Path", image_path]]
+    table = [["Render Time", f"{render_time:.4f} seconds"], ["Image Paths", ", ".join(image_paths)]]
     table_str = tabulate(table, headers=["Metric", "Value"], tablefmt="fancy_grid", numalign="center")
 
-    # Print the logging table in the main thread to avoid issues with threading.
-    print_safe(table_str)
+    # Print the logging table in the main thread
+    print(table_str)
 
-def print_safe(output):
-    """
-    This function ensures that the print statement is executed on the main thread.
-    This is a placeholder for actual implementation that ensures thread safety.
-    """
-    print(output)
+start_time = time.perf_counter()
 
-# Create a config instance with any required parameters
-cfg_instance = Config()
+output_dir = "/Users/siva/devel/houdini"
 
-# Parameters for the render
-prompt = "A red sphere"
-width = 512
-height = 512
-steps = 4
-seed = 0
+# Create a config instance
+cfg_instance = Config(
+    prompt="In the clouds piggy bank with hair",
+    output_dir=output_dir,
+)
+# If using image-to-image rendering, set the image in the config
+img2img = False  # Set to True for image-to-image rendering
+if img2img:
+    img_path = "/Users/siva/devel/ai-render/data/input1.png"
+    cfg_instance.image = Image.open(img_path)
+    cfg_instance.image2image = True
 
-# Start rendering in a separate thread
-render_thread = threading.Thread(target=render_in_thread, args=(cfg_instance, prompt, width, height, steps, seed))
+engine = RenderEngine(cfg_instance)
+
+# a = engine.load_model()
+# print(a)
+# engine.render()
+
+# Start rendering in a separate thread using RenderThread
+render_thread = RenderThread(engine=engine, on_complete_callback=post_render_tasks)
 render_thread.start()
