@@ -12,13 +12,21 @@ class RenderThread(threading.Thread):
         self.engine = engine
         self.on_complete = on_complete_callback
         self.rendered_image = None
+        self._stop_event = threading.Event()
 
     def run(self):
         try:
             logging.info("Rendering...")
-            self.rendered_image = self.engine.render()
+            if not self._stop_event.is_set():
+                self.rendered_image = self.engine.render()
             logging.info("Rendering completed successfully.")
+            print("Rendering completed successfully.")
         except Exception as e:
             logging.error(f"An error occurred during rendering: {e}")
         finally:
+            print("Finally")
             self.on_complete(self.rendered_image)
+    
+    def stop_rendering(self):
+        self._stop_event.set()
+        logging.info("Stopping rendering...")

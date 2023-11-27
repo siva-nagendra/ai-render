@@ -73,10 +73,13 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.render_button.clicked.connect(self.on_render_clicked)
         self.layout.addWidget(self.render_button)
         
-        # Create QLabel for the image
-        self.image_label = QtWidgets.QLabel(self)
-        self.image_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.layout.addWidget(self.image_label)
+        # Add a progress bar to indicate rendering progress
+        self.progress_bar = QtWidgets.QProgressBar(self)
+        self.progress_bar.setVisible(False)
+        self.layout.addWidget(self.progress_bar)
+
+        # Flag to determine if rendering is in progress
+        self.is_rendering = False
         
         # Setup parameters
         self.setup_parameters()
@@ -86,6 +89,11 @@ class AiRenderPanel(QtWidgets.QWidget):
 
         self.connect_signals()
     
+    def on_render_clicked(self):
+        if not self.is_rendering:
+            self.start_rendering()
+        else:
+            self.stop_rendering()
     def connect_signals(self):
         self.image_update_signal.connect(self.update_comp_image)
 
@@ -100,7 +108,7 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.steps_slider.setValue(4)
         self.seed_slider.setValue(0)
 
-    def on_render_clicked(self):
+    def start_rendering(self):
         prompt = self.text_edit.toPlainText()
         
         if not prompt:
@@ -124,10 +132,25 @@ class AiRenderPanel(QtWidgets.QWidget):
         )
         engine = render_from_text.RenderFromText(self.config)
         
-        self.render_thread = RenderThread(engine=engine, on_complete_callback=self.save_image)
+        self.render_thread = RenderThread(engine=engine, on_complete_callback=self.post_render_tasks)
+        # Update UI to show rendering is in progress
+        self.render_button.setText("✋ Stop Rendering")
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setRange(0, 0)  # Indeterminate mode
+        self.is_rendering = True
         self.render_thread.start()
 
-    def save_image(self, image: Image.Image):
+    def stop_rendering(self):
+        if self.render_thread.is_alive():
+            # Implement a method in RenderThread to safely stop rendering
+            self.render_thread.stop_rendering()
+        
+        # Update UI to show rendering has stopped
+        self.render_button.setText("🎨 Render")
+        self.progress_bar.setVisible(False)
+        self.is_rendering = False
+
+    def post_render_tasks(self, image: Image.Image):
         logging.info("Saving image...")
         image_exporter = ImageExporter(self.config.output_dir)  # Use a different variable name
         image_path = image_exporter.export(image)
@@ -136,7 +159,7 @@ class AiRenderPanel(QtWidgets.QWidget):
 
     def update_comp_image(self, image_path):
         # Define the path to the composite network and the node name
-        comp_network_path = '/img/ai_render_comp'  # Updated as per your request
+        comp_network_path = '/img/comp1'  # Updated as per your request
         node_name = 'default_pic'
         
         # Get the composite network node
@@ -145,7 +168,7 @@ class AiRenderPanel(QtWidgets.QWidget):
         # If the composite network doesn't exist, create it
         if not comp_net:
             img_network = hou.node('/img')
-            comp_net = img_network.createNode('img', 'ai_render_comp')
+            comp_net = img_network.createNode('img', 'comp1')
         
         # Check if the node exists
         comp_node = comp_net.node(node_name)
@@ -157,6 +180,7 @@ class AiRenderPanel(QtWidgets.QWidget):
         # Set the filename parameter to the image path
         comp_node.parm('filename1').set(image_path)
         comp_net.layoutChildren()
+        self.stop_rendering()
 
     def _paneActivated(self, pane_tab):
         pass
