@@ -5,24 +5,12 @@
  used by the application.  Note, that two definitions of the
  same interface or of the interfaces menu are not allowed
  in a single file. -->
-  <interface name="airendermanager" label="AI Render" icon="MISC_python" showNetworkNavigationBar="true" help_url="">
-    <script><![CDATA[from ai_render.render_manager import render_panel
-
-thePanel = None
-
+  <interface name="ai_render" label="AI Render" icon="MISC_python" showNetworkNavigationBar="true" help_url="">
+    <script><![CDATA[from ai_render.houdini.widgets.render_panel import AiRenderPanel
 def onCreateInterface():
     global thePanel
-    thePanel = render_panel.AiRenderPanel()
-    return thePanel
-
-def onDestroyInterface():
-    global thePanel
-    thePanel._paneClosed()
-    thePanel = None
-
-def onNodePathChanged(node):
-    global thePanel
-    thePanel._panePathChanged(node)]]></script>
+    thePanel = AiRenderPanel()
+    return thePanel]]></script>
     <includeInPaneTabMenu menu_position="0" create_separator="false"/>
     <includeInToolbarMenu menu_position="202" create_separator="true"/>
     <showInParametersPane optype=""/>

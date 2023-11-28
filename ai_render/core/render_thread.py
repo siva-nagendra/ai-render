@@ -19,6 +19,8 @@ class RenderThread(threading.Thread):
             logging.info("Rendering...")
             if not self._stop_event.is_set():
                 self.rendered_image = self.engine.render()
+            if not self.rendered_image:
+                raise Exception("Rendering failed.")
             logging.info("Rendering completed successfully.")
             print("Rendering completed successfully.")
         except Exception as e:

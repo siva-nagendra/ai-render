@@ -1,35 +1,33 @@
-from diffusers import LatentConsistencyModelPipeline, LatentConsistencyModelImg2ImgPipeline
-from typing import Union, List
+from diffusers import AutoPipelineForText2Image, AutoPipelineForImage2Image
 from ai_render.core.base_render_engine import BaseRenderEngine
 from PIL import Image
-import torch
+from typing import List, Union
 
 class RenderEngine(BaseRenderEngine):
-    def load_model(self) -> Union[LatentConsistencyModelPipeline, LatentConsistencyModelImg2ImgPipeline]:
-        """Load the appropriate model based on the rendering type."""
-        if self.config.image2image:
-            self.model = LatentConsistencyModelImg2ImgPipeline.from_pretrained(self.config.lcm_model_name)
-        else:
-            self.model = LatentConsistencyModelPipeline.from_pretrained(self.config.lcm_model_name)
-        
-        # Set the device and dtype
-        device = torch.device(self.config.torch_device)
-        dtype = torch.float16 if self.config.use_fp16 and device.type == 'cuda' else torch.float32
-
-        self.model.to(device=device, dtype=dtype)
+    def load_model(self) -> Union[AutoPipelineForText2Image, AutoPipelineForImage2Image]:
+        """
+        Load the AI model based on the configuration.
+        """
+        self.model = AutoPipelineForText2Image.from_pretrained(self.config.text2img_model)
+        if self.config.render_mode=="img2img":
+            self.model = AutoPipelineForImage2Image.from_pretrained(self.config.img2img_model)
+        self.model.to(device=self.config.device, dtype=self.config.dtype)
         return self.model
 
-    def render(self) -> Union[Image.Image, List[Image.Image]]:
-        """Render images based on the configuration."""
-        self.set_seed(self.config.seed, self.config.randomize_seed)
-        if self.config.image2image:
-            return self._render_image_to_image()
+    def render(self) -> List[Image.Image]:
+        """
+        Render the image based on the configuration..
+        """
+        if self.config.render_mode=="img2img":
+            return self._render_img2img()
         else:
-            return self._render_text_to_image()
+            self.set_seed(self.config.seed, self.config.randomize_seed)
+            return self._render_txt2img()
 
-
-    def _render_text_to_image(self) -> List[Image.Image]:
-        """Render method for text-to-image."""
+    def _render_txt2img(self) -> List[Image.Image]:
+        """
+        Render method for text-to-image.
+        """
         self.model = self.load_model()
         return self.model(
             prompt=self.config.prompt,
@@ -42,8 +40,10 @@ class RenderEngine(BaseRenderEngine):
             device=self.config.torch_device,
         ).images
 
-    def _render_image_to_image(self) -> List[Image.Image]:
-        """Render method for image-to-image."""
+    def _render_img2img(self) -> List[Image.Image]:
+        """
+        Render method for image-to-image.
+        """
         self.model = self.load_model()
         return self.model(
             prompt=self.config.prompt,

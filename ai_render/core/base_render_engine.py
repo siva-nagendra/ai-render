@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from ai_render.config.config import Config
+from ai_render.config import Config
 import torch
 from PIL import Image
 import warnings
