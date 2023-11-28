@@ -12,8 +12,8 @@ class Config(BaseModel):
     output_dir: str = ""
     prompt: str = ""
     image: Optional[Image.Image] = None
-    width: int = 512
-    height: int = 512
+    width: int = 1024
+    height: int = 1024
     steps: int = 4
     seed: int = 0
     randomize_seed: bool = False

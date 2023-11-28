@@ -1,4 +1,4 @@
-from PySide2 import QtWidgets, QtCore
+from PySide2 import QtWidgets, QtCore, QtGui
 from PIL import Image
 import hou
 import logging
@@ -11,6 +11,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 class AiRenderPanel(QtWidgets.QWidget):
     image_update_signal = QtCore.Signal(str) 
+
     def __init__(self, parent=None):
         super(AiRenderPanel, self).__init__(parent)
         self.setParent(hou.ui.mainQtWindow(), QtCore.Qt.Window)
@@ -18,14 +19,23 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.setWindowFlags(QtCore.Qt.Window)
         self.setStyleSheet(hou.qt.styleSheet())
         self.config = Config()
+
         self.layout = QtWidgets.QVBoxLayout(self)
-        
+        self.layout.setSpacing(15)
+        self.layout.setContentsMargins(15, 15, 15, 15)
+
         self.text_edit = ResizingTextEdit(self)
         self.text_edit.setPlaceholderText("Enter a prompt here...")
         self.layout.addWidget(self.text_edit)
         
+        self.connect_viewport_button = QtWidgets.QPushButton("Connect to Viewport")
+        self.connect_viewport_button.setCheckable(True)
+        self.connect_viewport_button.clicked.connect(self.toggle_viewport_connection)
+        self.layout.addWidget(self.connect_viewport_button)
+
         self.parameters_layout = QtWidgets.QFormLayout()
-        
+        self.parameters_layout.setSpacing(8)
+
         self.steps_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.seed_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
 
@@ -43,12 +53,7 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.parameters_layout.addRow("Seed:", seed_layout)
         
         self.layout.addLayout(self.parameters_layout)
-        
-        self.connect_viewport_button = QtWidgets.QPushButton("Connect to Viewport")
-        self.connect_viewport_button.setCheckable(True)
-        self.connect_viewport_button.clicked.connect(self.toggle_viewport_connection)
-        self.layout.addWidget(self.connect_viewport_button)
-        
+
         self.render_button = QtWidgets.QPushButton("🎨 Render 🚀")
         self.render_button.clicked.connect(self.on_render_clicked)
         self.layout.addWidget(self.render_button)
@@ -56,6 +61,8 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.progress_bar = QtWidgets.QProgressBar(self)
         self.progress_bar.setVisible(False)
         self.layout.addWidget(self.progress_bar)
+
+        self.layout.addStretch(1)
 
         self.is_rendering = False
 
@@ -68,14 +75,7 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.seed_slider.valueChanged.connect(lambda value: self.seed_value_edit.setText(str(value)))
         self.steps_value_edit.textChanged.connect(lambda value: self.steps_slider.setValue(int(value)))
         self.seed_value_edit.textChanged.connect(lambda value: self.seed_slider.setValue(int(value)))
-    
-    def toggle_viewport_connection(self):
-        if self.connect_viewport_button.isChecked():
-            self.connect_viewport_button.setText("Disconnect from Viewport")
-            self.config.render_mode = "img2img"
-        else:
-            self.connect_viewport_button.setText("Connect to Viewport")
-            self.config.render_mode = "text2img"
+
 
     def setup_parameters(self):
         self.steps_slider.setValue(4)
@@ -83,6 +83,24 @@ class AiRenderPanel(QtWidgets.QWidget):
 
         self.seed_slider.setValue(0)
         self.seed_value_edit.setText("0")
+    
+    def create_header_label(self, text):
+        header_label = QtWidgets.QLabel(text)
+        header_font = QtGui.QFont("Consolas", 24, QtGui.QFont.Bold)
+        header_label.setFont(header_font)
+        header_label.setAlignment(QtCore.Qt.AlignCenter)
+        header_palette = QtGui.QPalette()
+        header_palette.setColor(QtGui.QPalette.WindowText, QtGui.QColor("#00ff00"))
+        header_label.setPalette(header_palette)
+        self.layout.addWidget(header_label)
+
+    def toggle_viewport_connection(self):
+        if self.connect_viewport_button.isChecked():
+            self.connect_viewport_button.setText("Disconnect from Viewport")
+            self.config.render_mode = "img2img"
+        else:
+            self.connect_viewport_button.setText("Connect to Viewport")
+            self.config.render_mode = "text2img"
 
     def on_render_clicked(self):
         if not self.is_rendering:
