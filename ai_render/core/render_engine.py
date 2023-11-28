@@ -8,9 +8,10 @@ class RenderEngine(BaseRenderEngine):
         """
         Load the AI model based on the configuration.
         """
-        self.model = AutoPipelineForText2Image.from_pretrained(self.config.text2img_model)
         if self.config.render_mode=="img2img":
             self.model = AutoPipelineForImage2Image.from_pretrained(self.config.img2img_model)
+        else:
+            self.model = AutoPipelineForText2Image.from_pretrained(self.config.text2img_model)
         self.model.to(device=self.config.device, dtype=self.config.dtype)
         return self.model
 
@@ -18,10 +19,13 @@ class RenderEngine(BaseRenderEngine):
         """
         Render the image based on the configuration..
         """
+        self.set_seed(self.config.seed, self.config.randomize_seed)
+
         if self.config.render_mode=="img2img":
+            print("Rendering image to image")
             return self._render_img2img()
         else:
-            self.set_seed(self.config.seed, self.config.randomize_seed)
+            print("Rendering text to image")
             return self._render_txt2img()
 
     def _render_txt2img(self) -> List[Image.Image]:

@@ -24,14 +24,17 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.layout.setSpacing(15)
         self.layout.setContentsMargins(15, 15, 15, 15)
 
+        self.header_label = QtWidgets.QLabel("AI Render")
+        font = self.header_label.font()
+        font.setPointSize(25)
+        font.setBold(True)
+        self.header_label.setFont(font)
+        self.header_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.layout.addWidget(self.header_label)
+
         self.text_edit = ResizingTextEdit(self)
         self.text_edit.setPlaceholderText("Enter a prompt here...")
         self.layout.addWidget(self.text_edit)
-        
-        self.connect_viewport_button = QtWidgets.QPushButton("Connect to Viewport")
-        self.connect_viewport_button.setCheckable(True)
-        self.connect_viewport_button.clicked.connect(self.toggle_viewport_connection)
-        self.layout.addWidget(self.connect_viewport_button)
 
         self.parameters_layout = QtWidgets.QFormLayout()
         self.parameters_layout.setSpacing(8)
@@ -39,8 +42,8 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.steps_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.seed_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
 
-        self.steps_value_edit = QtWidgets.QLineEdit("4")
-        self.seed_value_edit = QtWidgets.QLineEdit("0")
+        self.steps_value_edit = QtWidgets.QLineEdit()
+        self.seed_value_edit = QtWidgets.QLineEdit()
 
         steps_layout = QtWidgets.QHBoxLayout()
         steps_layout.addWidget(self.steps_value_edit)
@@ -54,9 +57,16 @@ class AiRenderPanel(QtWidgets.QWidget):
         
         self.layout.addLayout(self.parameters_layout)
 
+        self.connect_viewport_button = QtWidgets.QPushButton("Connect Viewport")
+        self.connect_viewport_button.setCheckable(True)
+        self.connect_viewport_button.setFixedWidth(150)
+        self.button_layout = QtWidgets.QHBoxLayout()
         self.render_button = QtWidgets.QPushButton("🎨 Render 🚀")
-        self.render_button.clicked.connect(self.on_render_clicked)
-        self.layout.addWidget(self.render_button)
+
+        self.button_layout.addWidget(self.connect_viewport_button)
+        self.button_layout.addWidget(self.render_button)
+
+        self.layout.addLayout(self.button_layout)
         
         self.progress_bar = QtWidgets.QProgressBar(self)
         self.progress_bar.setVisible(False)
@@ -71,6 +81,8 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.connect_signals()
 
     def connect_signals(self):
+        self.connect_viewport_button.clicked.connect(self.toggle_viewport_connection)
+        self.render_button.clicked.connect(self.on_render_clicked)
         self.steps_slider.valueChanged.connect(lambda value: self.steps_value_edit.setText(str(value)))
         self.seed_slider.valueChanged.connect(lambda value: self.seed_value_edit.setText(str(value)))
         self.steps_value_edit.textChanged.connect(lambda value: self.steps_slider.setValue(int(value)))
@@ -83,23 +95,13 @@ class AiRenderPanel(QtWidgets.QWidget):
 
         self.seed_slider.setValue(0)
         self.seed_value_edit.setText("0")
-    
-    def create_header_label(self, text):
-        header_label = QtWidgets.QLabel(text)
-        header_font = QtGui.QFont("Consolas", 24, QtGui.QFont.Bold)
-        header_label.setFont(header_font)
-        header_label.setAlignment(QtCore.Qt.AlignCenter)
-        header_palette = QtGui.QPalette()
-        header_palette.setColor(QtGui.QPalette.WindowText, QtGui.QColor("#00ff00"))
-        header_label.setPalette(header_palette)
-        self.layout.addWidget(header_label)
 
     def toggle_viewport_connection(self):
         if self.connect_viewport_button.isChecked():
-            self.connect_viewport_button.setText("Disconnect from Viewport")
+            self.connect_viewport_button.setText("Disconnect Viewport")
             self.config.render_mode = "img2img"
         else:
-            self.connect_viewport_button.setText("Connect to Viewport")
+            self.connect_viewport_button.setText("Connect Viewport")
             self.config.render_mode = "text2img"
 
     def on_render_clicked(self):
@@ -147,3 +149,5 @@ class AiRenderPanel(QtWidgets.QWidget):
     def post_render_tasks(self, image: Image.Image):
         image_path = export_image(image[0], self.config.output_dir)
         update_comp_image(self, image_path)
+        self.stop_rendering()
+
