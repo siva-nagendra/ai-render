@@ -15,7 +15,7 @@ class ImageExporter:
             os.makedirs(self.output_dir)
             logging.info(f"Created directory: {self.output_dir}")
             
-        output_path = os.path.join(self.output_dir, f"out-{timestamp}.png")
+        output_path = os.path.join(self.output_dir, f"output/out-{timestamp}.png")
         image.save(output_path)
         logging.info(f"Image saved at: {output_path}")
         return output_path

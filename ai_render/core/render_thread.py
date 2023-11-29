@@ -18,7 +18,8 @@ class RenderThread(threading.Thread):
         try:
             logging.info("Rendering...")
             if not self._stop_event.is_set():
-                self.rendered_image = self.engine.render()
+                self.model = self.engine.load_model()
+                self.rendered_image = self.engine.render(model=self.model)
             if not self.rendered_image:
                 raise Exception("Rendering failed.")
             logging.info("Rendering completed successfully.")
@@ -26,7 +27,6 @@ class RenderThread(threading.Thread):
         except Exception as e:
             logging.error(f"An error occurred during rendering: {e}")
         finally:
-            print("Finally")
             self.on_complete(self.rendered_image)
     
     def stop_rendering(self):

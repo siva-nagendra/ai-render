@@ -28,7 +28,7 @@ start_time = time.perf_counter()
 output_dir = "/Users/siva/devel/houdini"
 
 cfg_instance = Config(
-    prompt="In the clouds piggy bank with hair",
+    prompt="Cheerios and exam results on a kitchen table",
     output_dir=output_dir,
 )
 
@@ -36,17 +36,18 @@ cfg_instance.render_mode = "img2img"
 engine_test = False
 
 if cfg_instance.render_mode == "img2img":
-    img_path = "/Users/siva/devel/ai-render/data/input1.png"
+    img_path = "/Users/siva/devel/houdini/input/in-20231128-173818.jpg"
     cfg_instance.image = Image.open(img_path)
     cfg_instance.render_mode = "img2img"
 
 engine = RenderEngine(cfg_instance)
 
 
+
 if engine_test:
     model = engine.load_model()
     print(f"Model loaded: {model}")
-    render = engine.render()
+    render = engine.render(model=model)
     print(f"Rendered image: {render}")
 else:
     render_thread = RenderThread(engine=engine, on_complete_callback=post_render_tasks)

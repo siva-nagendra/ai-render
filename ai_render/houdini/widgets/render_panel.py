@@ -1,11 +1,11 @@
 from PySide2 import QtWidgets, QtCore, QtGui
 from PIL import Image
+import sys
 import hou
 import logging
 from ai_render.config import Config
 from ai_render.core import render_engine, render_thread
-from ai_render.houdini.widgets.resizing_text_edit import ResizingTextEdit
-from ai_render.houdini.managers.image_manager import update_comp_image, export_image
+from ai_render.houdini.managers import image_manager
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -32,7 +32,8 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.header_label.setAlignment(QtCore.Qt.AlignCenter)
         self.layout.addWidget(self.header_label)
 
-        self.text_edit = ResizingTextEdit(self)
+        self.text_edit = QtWidgets.QTextEdit(self)
+        self.text_edit.setFixedHeight(50)
         self.text_edit.setPlaceholderText("Enter a prompt here...")
         self.layout.addWidget(self.text_edit)
 
@@ -57,9 +58,12 @@ class AiRenderPanel(QtWidgets.QWidget):
         
         self.layout.addLayout(self.parameters_layout)
 
-        self.connect_viewport_button = QtWidgets.QPushButton("Connect Viewport")
+        self.connect_viewport_button = QtWidgets.QPushButton("Disconnect Viewport")
         self.connect_viewport_button.setCheckable(True)
+        self.connect_viewport_button.setChecked(True)
         self.connect_viewport_button.setFixedWidth(150)
+        self.config.render_mode = "img2img"
+    
         self.button_layout = QtWidgets.QHBoxLayout()
         self.render_button = QtWidgets.QPushButton("🎨 Render 🚀")
 
@@ -69,8 +73,23 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.layout.addLayout(self.button_layout)
         
         self.progress_bar = QtWidgets.QProgressBar(self)
+        self.progress_bar.setFixedHeight(7)
         self.progress_bar.setVisible(False)
         self.layout.addWidget(self.progress_bar)
+
+         # Setup for stream redirector
+        self.redirector = StreamRedirector()
+        self.redirector.textWritten.connect(self.on_text_written)
+        sys.stdout = self.redirector
+        sys.stderr = self.redirector
+
+        # Add a QTextEdit for logging
+        self.log_widget = QtWidgets.QTextEdit(self)
+        self.log_widget.setVisible(False)
+
+        self.log_widget.setReadOnly(True)
+        self.log_widget.setFixedHeight(50)
+        self.layout.addWidget(self.log_widget)
 
         self.layout.addStretch(1)
 
@@ -87,7 +106,6 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.seed_slider.valueChanged.connect(lambda value: self.seed_value_edit.setText(str(value)))
         self.steps_value_edit.textChanged.connect(lambda value: self.steps_slider.setValue(int(value)))
         self.seed_value_edit.textChanged.connect(lambda value: self.seed_slider.setValue(int(value)))
-
 
     def setup_parameters(self):
         self.steps_slider.setValue(4)
@@ -115,7 +133,7 @@ class AiRenderPanel(QtWidgets.QWidget):
         
         if not prompt:
             logging.error("Prompt is empty.")
-            hou.ui.displayMessage("Please enter a prompt to continue.", severity=hou.severityType.WarningMessage)
+            hou.ui.displayMessage("Please enter a prompt to continue.", severity=hou.severityType.ImportantMessage)
             return
 
         self.config.prompt = prompt
@@ -125,7 +143,7 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.config.output_dir = "/Users/siva/devel/houdini"
 
         if self.config.render_mode == "img2img":
-            img_path = "/Users/siva/devel/ai-render/data/input1.png"
+            img_path = image_manager.capture_viewport(self.config.output_dir, width=self.config.width, height=self.config.height)
             self.config.image = Image.open(img_path)
 
         engine = render_engine.RenderEngine(self.config)
@@ -134,6 +152,7 @@ class AiRenderPanel(QtWidgets.QWidget):
 
         self.render_button.setText("✋ Stop Rendering")
         self.progress_bar.setVisible(True)
+        self.log_widget.setVisible(True)
         self.progress_bar.setRange(0, 0)
         self.is_rendering = True
         self.render_thread.start()
@@ -144,10 +163,33 @@ class AiRenderPanel(QtWidgets.QWidget):
         
         self.render_button.setText("🎨 Render")
         self.progress_bar.setVisible(False)
+        self.log_widget.setVisible(False)
         self.is_rendering = False
 
     def post_render_tasks(self, image: Image.Image):
-        image_path = export_image(image[0], self.config.output_dir)
-        update_comp_image(self, image_path)
+        image_path = image_manager.export_image(image[0], self.config.output_dir)
+        image_manager.update_comp_image(self, image_path)
         self.stop_rendering()
 
+    def on_text_written(self, text):
+        self.log_widget.moveCursor(QtGui.QTextCursor.End)
+        self.log_widget.insertPlainText(text)
+
+
+class QTextEditLogger(logging.Handler):
+    def __init__(self, widget):
+        super().__init__()
+        self.widget = widget
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.widget.append(msg)
+
+class StreamRedirector(QtCore.QObject):
+    textWritten = QtCore.Signal(str)
+
+    def write(self, text):
+        self.textWritten.emit(str(text))
+
+    def flush(self):
+        pass
