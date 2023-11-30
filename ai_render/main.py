@@ -3,17 +3,17 @@
 from ai_render.core.render_engine import RenderEngine
 from ai_render.config import Config
 from ai_render.core.exporter import ImageExporter
-from PIL import Image
 import time
 import warnings
 from tabulate import tabulate
 from ai_render.core.render_thread import RenderThread
+from diffusers.utils import load_image
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 def post_render_tasks(rendered_images):
     image_exporter = ImageExporter(cfg_instance.output_dir)
-    image_paths = [image_exporter.export(img) for img in rendered_images]
+    image_paths = [image_exporter.save_image(img) for img in rendered_images]
     
     end_time = time.perf_counter()
     render_time = end_time - start_time
@@ -33,16 +33,15 @@ cfg_instance = Config(
 )
 
 cfg_instance.render_mode = "img2img"
-engine_test = False
+img_path = "/Users/siva/devel/houdini/input/in-20231128-161837.jpg"
+cfg_instance.image = load_image(img_path)
 
-if cfg_instance.render_mode == "img2img":
-    img_path = "/Users/siva/devel/houdini/input/in-20231128-173818.jpg"
-    cfg_instance.image = Image.open(img_path)
-    cfg_instance.render_mode = "img2img"
+mask_image_path = "/Users/siva/devel/ai-render/data/mask.jpg"
+cfg_instance.mask_image = load_image(mask_image_path)
 
 engine = RenderEngine(cfg_instance)
 
-
+engine_test = False
 
 if engine_test:
     model = engine.load_model()

@@ -1,5 +1,7 @@
 from PySide2 import QtWidgets, QtCore, QtGui
 from PIL import Image
+from diffusers.utils import load_image
+
 import sys
 import hou
 import logging
@@ -143,8 +145,8 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.config.output_dir = "/Users/siva/devel/houdini"
 
         if self.config.render_mode == "img2img":
-            img_path = image_manager.capture_viewport(self.config.output_dir, width=self.config.width, height=self.config.height)
-            self.config.image = Image.open(img_path)
+            img_path = image_manager.capture_viewport(self.config.output_dir, width=self.config.width, height=self.config.height, mask_path=self.config.mask_path)
+            self.config.image = load_image(img_path)
 
         engine = render_engine.RenderEngine(self.config)
         

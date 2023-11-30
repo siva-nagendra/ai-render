@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
-from PIL import Image
 import torch
+from PIL import Image
 
 class Config(BaseModel):
     class Config:
@@ -9,10 +9,12 @@ class Config(BaseModel):
 
     text2img_model: str = "SimianLuo/LCM_Dreamshaper_v7"
     img2img_model: str = "SimianLuo/LCM_Dreamshaper_v7"
+    inpainting_model: str = "runwayml/stable-diffusion-inpainting"
     
     output_dir: str = ""
     prompt: str = ""
     image: Optional[Image.Image] = None
+    mask_image: Optional[Image.Image] = None
     width: int = 768
     height: int = 768
     steps: int = 10
@@ -26,6 +28,7 @@ class Config(BaseModel):
     use_fp16: bool = False
     render_mode: str = "text2img"
     safety_checker: bool = True
+    mask_path: str = "/Users/siva/devel/ai-render/data/mask.jpg"
 
     @property
     def render_mode(self) -> str:
@@ -33,8 +36,8 @@ class Config(BaseModel):
 
     @render_mode.setter
     def render_mode(self, value: str) -> None:
-        if value not in ["text2img", "img2img"]:
-            raise ValueError("Invalid render mode. Must be either 'text2img' or 'img2img'.")
+        if value not in ["text2img", "img2img", "inpainting"]:
+            raise ValueError("Invalid render mode. Must be either 'text2img' or 'img2img' or 'inpainting'.")
         self._render_mode = value
 
     @property

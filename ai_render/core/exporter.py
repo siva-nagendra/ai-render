@@ -19,7 +19,3 @@ class ImageExporter:
         image.save(output_path)
         logging.info(f"Image saved at: {output_path}")
         return output_path
-
-    def export(self, image: Image.Image) -> str:
-        logging.info("Exporting image...")
-        return self.save_image(image)

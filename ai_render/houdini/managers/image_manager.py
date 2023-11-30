@@ -3,6 +3,7 @@ import time
 import os
 import logging
 from ai_render.core.exporter import ImageExporter
+from ai_render.core.cleanup import process_image
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -42,7 +43,7 @@ def update_comp_image(self, image_path: str) -> None:
 def export_image(image, output_dir: str) -> str:
     logging.info("Saving image...")
     exporter: ImageExporter = ImageExporter(output_dir)
-    image_path: str = exporter.export(image)
+    image_path: str = exporter.save_image(image)
     logging.info(f"Image saved at: {image_path}")
     return image_path
 
@@ -50,23 +51,36 @@ def get_time_stamp() -> str:
     return time.strftime("%Y%m%d-%H%M%S")
 
 def get_image_path(output_dir: str) -> str:
-    return os.path.join(output_dir, f"input/in-{get_time_stamp()}.jpg") 
+    image_path = os.path.join(output_dir, f"input/in-{get_time_stamp()}.jpg")
+    os.makedirs(os.path.join(output_dir, "input"), exist_ok=True)
+    return image_path
 
-def capture_viewport(output_dir: str, frame_start: int = 1, frame_end: int = 1, width: int = 1024, height: int = 1024) -> str:
+def get_cleaned_image_path(output_dir: str) -> str:
+    image_path = os.path.join(output_dir, f"cleaned/cleaned-{get_time_stamp()}.jpg")
+    os.makedirs(os.path.join(output_dir, "cleaned"), exist_ok=True)
+    return image_path
+
+def capture_viewport(output_dir: str, width, height, mask_path) -> str:
     sceneview: hou.SceneViewer = getSceneViewer()
     viewport: hou.Viewport = sceneview.curViewport()
     image_path: str = get_image_path(output_dir)
 
     flipbook_settings: hou.FlipbookSettings = sceneview.flipbookSettings().stash()
-    flipbook_settings.frameRange((frame_start, frame_end))
+    flipbook_settings.frameRange((1, 1))
     flipbook_settings.outputToMPlay(False)
 
     flipbook_settings.useResolution(True)
-    flipbook_settings.resolution((768, 768))
+    flipbook_settings.resolution((width, height))
     flipbook_settings.output(image_path)
+    cleaned_image_path = get_cleaned_image_path(output_dir)
 
     viewport: hou.Viewport = sceneview.curViewport()
 
     sceneview.flipbook(viewport, flipbook_settings)
-    logging.info(f"Viewport snapshot saved at: {image_path}")
-    return image_path
+    
+    process_image(file_path=image_path,
+                cleaned_path=cleaned_image_path,
+                mask_path=mask_path)
+
+    logging.info(f"Viewport snapshot saved at: {cleaned_image_path}")
+    return cleaned_image_path
