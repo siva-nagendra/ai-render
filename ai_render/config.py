@@ -15,6 +15,7 @@ class Config(BaseModel):
     prompt: str = ""
     image: Optional[Image.Image] = None
     mask_image: Optional[Image.Image] = None
+    cleaned_image: Optional[Image.Image] = None
     width: int = 768
     height: int = 768
     steps: int = 10

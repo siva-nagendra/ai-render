@@ -7,11 +7,12 @@ import time
 import warnings
 from tabulate import tabulate
 from ai_render.core.render_thread import RenderThread
-from diffusers.utils import load_image
+from diffusers.utils import load_image, make_image_grid
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 def post_render_tasks(rendered_images):
+    rendered_images = [make_image_grid([cfg_instance.image, image], rows=1, cols=2) for image in rendered_images]
     image_exporter = ImageExporter(cfg_instance.output_dir)
     image_paths = [image_exporter.save_image(img) for img in rendered_images]
     
@@ -20,6 +21,8 @@ def post_render_tasks(rendered_images):
 
     table = [["Render Time", f"{render_time:.4f} seconds"], ["Image Paths", ", ".join(image_paths)]]
     table_str = tabulate(table, headers=["Metric", "Value"], tablefmt="fancy_grid", numalign="center")
+
+    [make_image_grid([cfg_instance.image, image], rows=1, cols=2) for image in rendered_images]
 
     print(table_str)
 

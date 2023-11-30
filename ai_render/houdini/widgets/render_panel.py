@@ -1,6 +1,6 @@
 from PySide2 import QtWidgets, QtCore, QtGui
 from PIL import Image
-from diffusers.utils import load_image
+from diffusers.utils import load_image, make_image_grid
 
 import sys
 import hou
@@ -21,6 +21,8 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.setWindowFlags(QtCore.Qt.Window)
         self.setStyleSheet(hou.qt.styleSheet())
         self.config = Config()
+
+        self.grid_mode = False
 
         self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.setSpacing(15)
@@ -73,6 +75,10 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.button_layout.addWidget(self.render_button)
 
         self.layout.addLayout(self.button_layout)
+
+        self.grid_mode_checkbox = QtWidgets.QCheckBox("Grid Mode")
+        self.grid_mode_checkbox.setChecked(False)
+        self.layout.addWidget(self.grid_mode_checkbox)
         
         self.progress_bar = QtWidgets.QProgressBar(self)
         self.progress_bar.setFixedHeight(7)
@@ -108,6 +114,13 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.seed_slider.valueChanged.connect(lambda value: self.seed_value_edit.setText(str(value)))
         self.steps_value_edit.textChanged.connect(lambda value: self.steps_slider.setValue(int(value)))
         self.seed_value_edit.textChanged.connect(lambda value: self.seed_slider.setValue(int(value)))
+        self.grid_mode_checkbox.stateChanged.connect(self.toggle_grid_mode)
+    
+    def toggle_grid_mode(self, state):
+        if state == QtCore.Qt.Checked:
+            self.grid_mode = True
+        else:
+            self.grid_mode = False
 
     def setup_parameters(self):
         self.steps_slider.setValue(4)
@@ -145,8 +158,8 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.config.output_dir = "/Users/siva/devel/houdini"
 
         if self.config.render_mode == "img2img":
-            img_path = image_manager.capture_viewport(self.config.output_dir, width=self.config.width, height=self.config.height, mask_path=self.config.mask_path)
-            self.config.image = load_image(img_path)
+            self.clean_image = image_manager.capture_viewport(self.config.output_dir, width=self.config.width, height=self.config.height, mask_path=self.config.mask_path)
+            self.config.image = load_image(self.clean_image)
 
         engine = render_engine.RenderEngine(self.config)
         
@@ -169,7 +182,13 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.is_rendering = False
 
     def post_render_tasks(self, image: Image.Image):
-        image_path = image_manager.export_image(image[0], self.config.output_dir)
+        rendered_image = image[0]
+
+        if self.config.render_mode == "img2img":
+            if self.grid_mode:
+                rendered_image = make_image_grid([load_image(self.clean_image), image[0]], rows=1, cols=2)
+    
+        image_path = image_manager.export_image(rendered_image, self.config.output_dir)
         image_manager.update_comp_image(self, image_path)
         self.stop_rendering()
 

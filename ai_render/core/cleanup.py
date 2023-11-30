@@ -1,5 +1,6 @@
 import cv2
 import os
+from diffusers.utils import make_image_grid
 
 def process_image(file_path, cleaned_path , mask_path):
     mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
