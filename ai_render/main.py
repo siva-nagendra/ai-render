@@ -22,7 +22,7 @@ def post_render_tasks(rendered_images):
     table = [["Render Time", f"{render_time:.4f} seconds"], ["Image Paths", ", ".join(image_paths)]]
     table_str = tabulate(table, headers=["Metric", "Value"], tablefmt="fancy_grid", numalign="center")
 
-    [make_image_grid([cfg_instance.image, image], rows=1, cols=2) for image in rendered_images]
+    # [make_image_grid([cfg_instance.image, image], rows=1, cols=2) for image in rendered_images]
 
     print(table_str)
 
@@ -30,27 +30,20 @@ start_time = time.perf_counter()
 
 output_dir = "/Users/siva/devel/houdini"
 
+img_path = "/Users/siva/devel/houdini/input/in-20231128-161915.jpg"
+
 cfg_instance = Config(
-    prompt="Cheerios and exam results on a kitchen table",
+    prompt="A blue grass field in the middle of a rainforest",
+    image=load_image(img_path),
     output_dir=output_dir,
 )
 
-cfg_instance.render_mode = "img2img"
-img_path = "/Users/siva/devel/houdini/input/in-20231128-161837.jpg"
-cfg_instance.image = load_image(img_path)
-
-mask_image_path = "/Users/siva/devel/ai-render/data/mask.jpg"
-cfg_instance.mask_image = load_image(mask_image_path)
-
 engine = RenderEngine(cfg_instance)
 
-engine_test = False
 
-if engine_test:
-    model = engine.load_model()
-    print(f"Model loaded: {model}")
-    render = engine.render(model=model)
-    print(f"Rendered image: {render}")
-else:
-    render_thread = RenderThread(engine=engine, on_complete_callback=post_render_tasks)
-    render_thread.start()
+# model = engine.load_model()
+# print(f"Model loaded: {model}")
+# render = engine.render(model=model)
+# print(f"Rendered image: {render}")
+render_thread = RenderThread(engine=engine, config=cfg_instance, on_complete_callback=post_render_tasks)
+render_thread.start()

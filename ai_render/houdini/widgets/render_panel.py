@@ -1,10 +1,10 @@
-from PySide2 import QtWidgets, QtCore, QtGui
-from PIL import Image
-from diffusers.utils import load_image, make_image_grid
-
+import os
 import sys
 import hou
 import logging
+from PIL import Image
+from PySide2 import QtWidgets, QtCore, QtGui
+from diffusers.utils import load_image, make_image_grid
 from ai_render.config import Config
 from ai_render.core import render_engine, render_thread
 from ai_render.houdini.managers import image_manager
@@ -21,6 +21,8 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.setWindowFlags(QtCore.Qt.Window)
         self.setStyleSheet(hou.qt.styleSheet())
         self.config = Config()
+
+        self.render_thread = None
 
         self.grid_mode = False
 
@@ -44,59 +46,43 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.parameters_layout = QtWidgets.QFormLayout()
         self.parameters_layout.setSpacing(8)
 
-        self.steps_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.seed_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-
         self.steps_value_edit = QtWidgets.QLineEdit()
         self.seed_value_edit = QtWidgets.QLineEdit()
+        self.guidance_scale_value_edit = QtWidgets.QLineEdit()
+        self.strength_value_edit = QtWidgets.QLineEdit()
 
-        steps_layout = QtWidgets.QHBoxLayout()
-        steps_layout.addWidget(self.steps_value_edit)
-        steps_layout.addWidget(self.steps_slider)
-        self.parameters_layout.addRow("Steps:", steps_layout)
-
-        seed_layout = QtWidgets.QHBoxLayout()
-        seed_layout.addWidget(self.seed_value_edit)
-        seed_layout.addWidget(self.seed_slider)
-        self.parameters_layout.addRow("Seed:", seed_layout)
+        self.parameters_layout.addRow("Steps:", self.steps_value_edit)
+        self.parameters_layout.addRow("Seed:", self.seed_value_edit)
+        self.parameters_layout.addRow("Guidance Scale:", self.guidance_scale_value_edit)
+        self.parameters_layout.addRow("Strength:", self.strength_value_edit)
         
         self.layout.addLayout(self.parameters_layout)
-
-        self.connect_viewport_button = QtWidgets.QPushButton("Disconnect Viewport")
-        self.connect_viewport_button.setCheckable(True)
-        self.connect_viewport_button.setChecked(True)
-        self.connect_viewport_button.setFixedWidth(150)
-        self.config.render_mode = "img2img"
-    
-        self.button_layout = QtWidgets.QHBoxLayout()
-        self.render_button = QtWidgets.QPushButton("🎨 Render 🚀")
-
-        self.button_layout.addWidget(self.connect_viewport_button)
-        self.button_layout.addWidget(self.render_button)
-
-        self.layout.addLayout(self.button_layout)
 
         self.grid_mode_checkbox = QtWidgets.QCheckBox("Grid Mode")
         self.grid_mode_checkbox.setChecked(False)
         self.layout.addWidget(self.grid_mode_checkbox)
         
+        self.button_layout = QtWidgets.QHBoxLayout()
+        self.render_button = QtWidgets.QPushButton("🎨 Render 🚀")
+
+        self.button_layout.addWidget(self.render_button)
+
+        self.layout.addLayout(self.button_layout)
         self.progress_bar = QtWidgets.QProgressBar(self)
         self.progress_bar.setFixedHeight(7)
         self.progress_bar.setVisible(False)
         self.layout.addWidget(self.progress_bar)
 
-         # Setup for stream redirector
         self.redirector = StreamRedirector()
         self.redirector.textWritten.connect(self.on_text_written)
         sys.stdout = self.redirector
         sys.stderr = self.redirector
 
-        # Add a QTextEdit for logging
         self.log_widget = QtWidgets.QTextEdit(self)
         self.log_widget.setVisible(False)
 
         self.log_widget.setReadOnly(True)
-        self.log_widget.setFixedHeight(50)
+        self.log_widget.setFixedHeight(40)
         self.layout.addWidget(self.log_widget)
 
         self.layout.addStretch(1)
@@ -104,17 +90,13 @@ class AiRenderPanel(QtWidgets.QWidget):
         self.is_rendering = False
 
         self.setup_parameters()
+        self.load_engine()
 
         self.connect_signals()
 
     def connect_signals(self):
-        self.connect_viewport_button.clicked.connect(self.toggle_viewport_connection)
-        self.render_button.clicked.connect(self.on_render_clicked)
-        self.steps_slider.valueChanged.connect(lambda value: self.steps_value_edit.setText(str(value)))
-        self.seed_slider.valueChanged.connect(lambda value: self.seed_value_edit.setText(str(value)))
-        self.steps_value_edit.textChanged.connect(lambda value: self.steps_slider.setValue(int(value)))
-        self.seed_value_edit.textChanged.connect(lambda value: self.seed_slider.setValue(int(value)))
         self.grid_mode_checkbox.stateChanged.connect(self.toggle_grid_mode)
+        self.render_button.clicked.connect(self.on_render_clicked)
     
     def toggle_grid_mode(self, state):
         if state == QtCore.Qt.Checked:
@@ -123,25 +105,28 @@ class AiRenderPanel(QtWidgets.QWidget):
             self.grid_mode = False
 
     def setup_parameters(self):
-        self.steps_slider.setValue(4)
-        self.steps_value_edit.setText("4")
-
-        self.seed_slider.setValue(0)
-        self.seed_value_edit.setText("0")
-
-    def toggle_viewport_connection(self):
-        if self.connect_viewport_button.isChecked():
-            self.connect_viewport_button.setText("Disconnect Viewport")
-            self.config.render_mode = "img2img"
-        else:
-            self.connect_viewport_button.setText("Connect Viewport")
-            self.config.render_mode = "text2img"
+        self.steps_value_edit.setText(str(self.config.steps))
+        self.seed_value_edit.setText(str(self.config.seed))
+        self.guidance_scale_value_edit.setText(str(self.config.guidance_scale))
+        self.strength_value_edit.setText(str(self.config.strength))
 
     def on_render_clicked(self):
         if not self.is_rendering:
+            self.is_rendering = True
+            self.render_button.setText("✋ Stop Rendering")
+            self.progress_bar.setVisible(True)
+            self.log_widget.setVisible(True)
+            self.progress_bar.setRange(0, 0)
             self.start_rendering()
         else:
+            self.is_rendering = False
+            self.render_button.setText("🎨 Render")
+            self.progress_bar.setVisible(False)
+            self.log_widget.setVisible(False)
             self.stop_rendering()
+
+    def load_engine(self):
+        self.engine = render_engine.RenderEngine(self.config)
 
     def start_rendering(self):
         prompt = self.text_edit.toPlainText()
@@ -152,50 +137,43 @@ class AiRenderPanel(QtWidgets.QWidget):
             return
 
         self.config.prompt = prompt
-        self.config.steps = self.steps_slider.value()
-        self.config.seed = self.seed_slider.value()
+        self.config.steps = int(self.steps_value_edit.text())
+        self.config.seed = int(self.seed_value_edit.text())
+        self.config.guidance_scale = float(self.guidance_scale_value_edit.text())
+        self.config.strength = float(self.strength_value_edit.text())
 
-        self.config.output_dir = "/Users/siva/devel/houdini"
+        self.grid_mode = self.grid_mode_checkbox.isChecked()
 
-        if self.config.render_mode == "img2img":
-            self.clean_image = image_manager.capture_viewport(self.config.output_dir, width=self.config.width, height=self.config.height, mask_path=self.config.mask_path)
-            self.config.image = load_image(self.clean_image)
+        self.config.output_dir = "/tmp/ai-render"
 
-        engine = render_engine.RenderEngine(self.config)
-        
-        self.render_thread = render_thread.RenderThread(engine=engine, on_complete_callback=self.post_render_tasks)
+        self.clean_image = image_manager.capture_viewport(self.config.output_dir, width=self.config.width, height=self.config.height, mask_path=self.config.mask_path)
+        self.config.image = load_image(self.clean_image)
 
-        self.render_button.setText("✋ Stop Rendering")
-        self.progress_bar.setVisible(True)
-        self.log_widget.setVisible(True)
-        self.progress_bar.setRange(0, 0)
-        self.is_rendering = True
+        if self.render_thread is not None and self.render_thread.is_alive():
+            self.render_thread.stop_rendering()
+        self.render_thread = render_thread.RenderThread(engine=self.engine, config=self.config, on_complete_callback=self.post_render_tasks)
         self.render_thread.start()
 
     def stop_rendering(self):
-        if self.render_thread.is_alive():
+        if self.render_thread and self.render_thread.is_alive():
             self.render_thread.stop_rendering()
-        
-        self.render_button.setText("🎨 Render")
-        self.progress_bar.setVisible(False)
-        self.log_widget.setVisible(False)
-        self.is_rendering = False
+            self.render_thread.join()
 
     def post_render_tasks(self, image: Image.Image):
+        print("Post render tasks")
         rendered_image = image[0]
 
-        if self.config.render_mode == "img2img":
-            if self.grid_mode:
-                rendered_image = make_image_grid([load_image(self.clean_image), image[0]], rows=1, cols=2)
+        if self.grid_mode:
+            rendered_image = make_image_grid([load_image(self.clean_image), image[0]], rows=1, cols=2)
     
         image_path = image_manager.export_image(rendered_image, self.config.output_dir)
-        image_manager.update_comp_image(self, image_path)
-        self.stop_rendering()
+        print(f"Image path: {image_path}")
+        # image_manager.update_comp_image(self, image_path)
+        # print("Updated comp image")
 
     def on_text_written(self, text):
         self.log_widget.moveCursor(QtGui.QTextCursor.End)
         self.log_widget.insertPlainText(text)
-
 
 class QTextEditLogger(logging.Handler):
     def __init__(self, widget):

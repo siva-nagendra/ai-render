@@ -2,7 +2,6 @@ import hou
 import time
 import os
 import logging
-from ai_render.core.exporter import ImageExporter
 from ai_render.core.cleanup import process_image
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,7 +20,8 @@ def getSceneViewer() -> hou.SceneViewer:
         print("No SceneViewers detected.")
         return None
 
-def update_comp_image(self, image_path: str) -> None:
+def update_comp_image(image_path: str) -> None:
+    print(f"Updating comp image at: {image_path}")
     comp_network_path: str = '/img/comp1'
     node_name: str = 'default_pic'
     
@@ -35,16 +35,17 @@ def update_comp_image(self, image_path: str) -> None:
     
     if not comp_node:
         comp_node = comp_net.createNode('file', node_name)
-    
+    print(f"Updating comp image at: {image_path}")
     comp_node.parm('filename1').set(image_path)
     comp_net.layoutChildren()
-    self.stop_rendering()
 
 def export_image(image, output_dir: str) -> str:
-    logging.info("Saving image...")
-    exporter: ImageExporter = ImageExporter(output_dir)
-    image_path: str = exporter.save_image(image)
-    logging.info(f"Image saved at: {image_path}")
+    image_path = os.path.join(output_dir, f"output/out-{get_time_stamp()}.jpg")
+    os.makedirs(os.path.join(output_dir, "output"), exist_ok=True)
+    image.save(image_path)
+    print(f"Image saved at: {image_path}")
+    update_comp_image(image_path)
+    print("Updated comp image")
     return image_path
 
 def get_time_stamp() -> str:
@@ -58,6 +59,11 @@ def get_image_path(output_dir: str) -> str:
 def get_cleaned_image_path(output_dir: str) -> str:
     image_path = os.path.join(output_dir, f"cleaned/cleaned-{get_time_stamp()}.jpg")
     os.makedirs(os.path.join(output_dir, "cleaned"), exist_ok=True)
+    return image_path
+
+def get_output_image_path(output_dir: str) -> str:
+    image_path = os.path.join(output_dir, f"output/out-{get_time_stamp()}.jpg")
+    os.makedirs(os.path.join(output_dir, "output"), exist_ok=True)
     return image_path
 
 def capture_viewport(output_dir: str, width, height, mask_path) -> str:
